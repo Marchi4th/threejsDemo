@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <script src="node_modules/three/build/three.min.js"></script>
+  <script src="node_modules/three/examples/js/libs/dat.gui.min.js"></script>
+  <script src="node_modules/three/examples/js/loaders/OBJLoader.js"></script>
+  <script src="node_modules/three/examples/js/loaders/DDSLoader.js"></script>
+  <script src="node_modules/three/examples/js/controls/TrackballControls.js"></script>
+  <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+</head>
+<style>
+    html,body{
+      margin: 0;
+      padding: 0;
+    }
+
+    #percent {
+      position: absolute;
+      width: 200px;
+      height: 20px;
+      color: red;
+      text-align: center;
+      border: 1px;
+    }
+
+    #WebGL-output {
+      background-color: #eeeeee;
+    }
+    
+  </style>
+  <body>
+    <div id="percent"></div>
+    <div id="WebGL-output"></div>
+    <script>
+      $(function(){
+          //编辑代码处
+          var scene = new THREE.Scene();//场景构建
+          var camera = new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,0.1,1000);//相机构建
+          var renderer = new THREE.WebGLRenderer();//渲染器构建
+          renderer.setClearColor(0xEEEEEE);
+          renderer.setSize(window.innerWidth,window.innerHeight);
+          renderer.shadowMap.enabled = true;//激活阴影
+          //构建一个坐标轴
+
+          /* var axes = new THREE.AxesHelper(20);
+          scene.add(axes);*/
+          /* var planeGeometry = new THREE.PlaneGeometry(40,20); */
+
+          //var planeMaterial = new THREE.MeshBasicMaterial({color:0xcccccc});
+
+          /* 模型底座，xz面
+          var planeMaterial = new THREE.MeshLambertMaterial({color:0xffffff});//转换对光源有渲染的材质
+          var plane = new THREE.Mesh(planeGeometry,planeMaterial);
+          plane.rotation.x = -0.5*Math.PI;
+          plane.position.x = 0;
+          plane.position.y = 0;
+          plane.position.z = 0;
+          scene.add(plane);
+          plane.receiveShadow  = true; 
+          */
+
+          //添加灯光
+          var spotLight = new THREE.SpotLight(0xffffff);
+          spotLight.position.set(0,200,200); // 光源位置
+          spotLight.castShadow = true;
+          scene.add(spotLight);
+
+          //渲染视图视角
+          camera.position.x = 0;
+          camera.position.y = 15;
+          camera.position.z = 50;
+          var zeroPoint = new THREE.Vector3(0, 0, 0);
+          camera.lookAt(zeroPoint);
+          //旋转相机以观察物体的不同角度
+          var cameraRound = 50;
+          $("body").bind("mousedown",cameraMove);
+          $("body").bind("touchstart",TouchCameraMove);
+          var arf = 0;
+          var oldArf = 0;
+          function cameraMove(ev){
+            var mouseDownY = ev.pageY;
+            var mouseDownX = ev.pageX;
+            
+            $("body").bind("mousemove",function(ev){
+              var mouseMoveY = ev.pageY;
+              var mouseMoveX = ev.pageX;
+              arf = (mouseMoveX - mouseDownX)/100+oldArf;
+              camera.position.z = cameraRound *(Math.cos(arf));
+              camera.position.x = cameraRound *(Math.sin(arf));
+              camera.lookAt(zeroPoint);
+              console.log(camera.position)
+            });
+            $("body").bind("mouseup",function(ev){
+              $("body").unbind("mousemove");
+              oldArf = arf;
+            })
+          }
+
+          //兼容手机
+          function TouchCameraMove(ev){
+            var mouseDownY = ev.touches[ 0 ].pageY;
+            var mouseDownX = ev.touches[ 0 ].pageX;
+            
+            $("body").bind("touchmove",function(ev){
+              var mouseMoveY = ev.touches[ 0 ].pageY;
+              var mouseMoveX = ev.touches[ 0 ].pageX;
+              arf = (mouseMoveX - mouseDownX)/100+oldArf;
+              camera.position.z = cameraRound *(Math.cos(arf));
+              camera.position.x = cameraRound *(Math.sin(arf));
+              camera.lookAt(zeroPoint);
+              console.log(camera.position)
+            });
+            $("body").bind("touchend",function(ev){
+              $("body").unbind("touchmove");
+              oldArf = arf;
+            })
+          }
+
+          $("#WebGL-output").append(renderer.domElement)
+          renderScene();
+          function renderScene(){
+            var clock = new THREE.Clock();
+            var delta = clock.getDelta();
+            requestAnimationFrame(renderScene);
+            renderer.render(scene,camera);
+          }
+          var mesh;
+  
+          var loader = new THREE.OBJLoader();
+          loader.load('obj/Double-Sofa.obj', function (geometry) {
+            
+            var material = new THREE.MeshLambertMaterial({color: 0x5C3A21});
+            //store global reference to .obj
+            globalObject = geometry;
+        
+            geometry.traverse( function (child) {
+              if ( child instanceof THREE.Mesh ) {
+                child.material.map = THREE.ImageUtils.loadTexture( 'obj/Sofa.jpg');  // 底层贴图
+                child.material.bumpMap = THREE.ImageUtils.loadTexture( 'obj/Map__3_Normal Bump.jpg');  // 法向凹凸
+                child.material.bumpScale = 0.1 ; // 凹凸程度
+                child.material.needsUpdate = true;
+              }
+            });
+    
+            // geometry is a group of children. If a child has one additional child it's probably a mesh
+            geometry.children.forEach(function (child) {
+              if (child.children.length == 1) {
+                if (child.children[0] instanceof THREE.Mesh) {
+                  child.children[0].material = material;
+                }
+              }
+            });
+    
+            mesh = geometry;
+            geometry.scale.set(0.1, 0.1, 0.1);
+            scene.add(geometry);
+          });
+          
+          render();
+          
+          function render() {
+            //render using requestAnimationFrame
+            requestAnimationFrame(render);
+            renderer.render(scene, camera);
+          }
+      })
+    </script>
+    
+  </body>
+  </html>
